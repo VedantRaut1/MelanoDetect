@@ -1,67 +1,480 @@
-<!-- The primary goal of this work is to build up a Model of Skin Cancer Detection System utilizing Machine Learning Algorithms. After experimenting with many different architectures for the CNN model It is found that adding the BatchNormalization layer after each Dense, and MaxPooling2D layer can help increase the validation accuracy. In future, a mobile application can be made. -->
-
-
 <!doctype html>
 <html lang="en">
-
 <head>
-  <!-- Required meta tags -->
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-
-  <!-- Bootstrap CSS -->
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css" rel="stylesheet"
-    integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6" crossorigin="anonymous">
+  <title>MelanoDetect: Skin Cancer Detection Using CNN</title>
   <style>
+    :root {
+      --bg: #eef5f6;
+      --surface: rgba(255, 255, 255, 0.88);
+      --surface-strong: rgba(255, 255, 255, 0.96);
+      --text: #122027;
+      --muted: #647681;
+      --accent: #167c78;
+      --accent-dark: #115f5b;
+      --accent-soft: rgba(22, 124, 120, 0.1);
+      --line: rgba(18, 32, 39, 0.08);
+      --shadow: 0 24px 70px rgba(18, 42, 48, 0.12);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
     body {
-      background-color: black;
+      margin: 0;
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(22, 124, 120, 0.14), transparent 28%),
+        radial-gradient(circle at 85% 15%, rgba(82, 130, 160, 0.12), transparent 22%),
+        linear-gradient(180deg, #f6fbfb 0%, #edf4f4 48%, #f9fbfb 100%);
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .page {
+      width: min(1160px, calc(100% - 40px));
+      margin: 0 auto;
+    }
+
+    .site-header {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: rgba(246, 251, 251, 0.74);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid rgba(18, 32, 39, 0.05);
+    }
+
+    .nav {
+      width: min(1160px, calc(100% - 40px));
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      padding: 18px 0;
+    }
+
+    .brand {
+      display: grid;
+      gap: 4px;
+    }
+
+    .brand strong {
+      font-size: 1.05rem;
+      letter-spacing: -0.02em;
+    }
+
+    .brand span {
+      font-size: 0.86rem;
+      color: var(--muted);
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 22px;
+      flex-wrap: wrap;
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .nav-cta {
+      padding: 11px 18px;
+      border-radius: 999px;
+      background: linear-gradient(135deg, var(--accent) 0%, #1c9b95 100%);
       color: white;
-      margin-top: 100px;
-      margin-bottom: 100px;
-      margin-right: 100px;
-      margin-left: 100px;
+      font-weight: 700;
+      box-shadow: 0 12px 22px rgba(22, 124, 120, 0.18);
+    }
+
+    .hero {
+      padding: 56px 0 34px;
+    }
+
+    .hero-card,
+    .upload-card,
+    .info-card {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 32px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(14px);
+    }
+
+    .hero-card {
+      padding: 38px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-card::after {
+      content: "";
+      position: absolute;
+      width: 300px;
+      height: 300px;
+      right: -120px;
+      top: -90px;
+      background: radial-gradient(circle, rgba(22, 124, 120, 0.12), transparent 70%);
+      pointer-events: none;
+    }
+
+    .hero-layout {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: minmax(0, 1.02fr) minmax(360px, 0.88fr);
+      gap: 30px;
+      align-items: center;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      padding: 9px 14px;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      color: var(--accent-dark);
+      font-size: 0.86rem;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 16px 0 14px;
+      font-size: clamp(2.4rem, 4.6vw, 4rem);
+      line-height: 0.96;
+      letter-spacing: -0.05em;
+      max-width: 10ch;
+    }
+
+    h2 {
+      margin: 0;
+      font-size: 1.55rem;
+      letter-spacing: -0.03em;
+    }
+
+    h3 {
+      margin: 0 0 8px;
+      font-size: 1.02rem;
+      letter-spacing: -0.02em;
+    }
+
+    p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.72;
+      font-size: 1rem;
+    }
+
+    .lead {
+      max-width: 47ch;
+      font-size: 1rem;
+    }
+
+    .hero-actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 22px;
+    }
+
+    .button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 14px 18px;
+      border-radius: 18px;
+      font-weight: 700;
+    }
+
+    .button.primary {
+      background: linear-gradient(135deg, var(--accent) 0%, #1b9792 100%);
+      color: white;
+      box-shadow: 0 16px 28px rgba(22, 124, 120, 0.2);
+    }
+
+    .button.secondary {
+      background: rgba(255, 255, 255, 0.78);
+      border: 1px solid var(--line);
+      color: var(--text);
+    }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      margin-top: 24px;
+    }
+
+    .metric {
+      padding: 18px;
+      border-radius: 22px;
+      background: rgba(255, 255, 255, 0.72);
+      border: 1px solid rgba(18, 32, 39, 0.06);
+    }
+
+    .metric strong {
+      display: block;
+      font-size: 1.14rem;
+      margin-bottom: 6px;
+      color: var(--text);
+    }
+
+    .upload-card {
+      width: 100%;
+      padding: 28px;
+      display: grid;
+      gap: 18px;
+      background: var(--surface-strong);
+    }
+
+    .upload-box {
+      border: 2px dashed rgba(22, 124, 120, 0.22);
+      border-radius: 24px;
+      padding: 20px;
+      background: linear-gradient(180deg, rgba(242, 250, 249, 0.94), rgba(255, 255, 255, 0.98));
+    }
+
+    input[type="file"] {
+      width: 100%;
+      padding: 13px;
+      border-radius: 16px;
+      border: 1px solid var(--line);
+      background: white;
+      color: var(--text);
+    }
+
+    button[type="submit"] {
+      width: 100%;
+      border: 0;
+      border-radius: 18px;
+      padding: 15px 18px;
+      background: linear-gradient(135deg, var(--accent) 0%, #1b9792 100%);
+      color: white;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.18s ease, box-shadow 0.18s ease;
+      box-shadow: 0 16px 28px rgba(22, 124, 120, 0.2);
+    }
+
+    button[type="submit"]:hover {
+      transform: translateY(-1px);
+    }
+
+    .preview {
+      display: none;
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      object-fit: cover;
+      border-radius: 24px;
+      border: 1px solid var(--line);
+      background: white;
+    }
+
+    .error {
+      padding: 12px 14px;
+      border-radius: 14px;
+      background: rgba(173, 40, 40, 0.1);
+      color: #912727;
+      border: 1px solid rgba(173, 40, 40, 0.16);
+    }
+
+    .panel-note {
+      padding: 16px;
+      border-radius: 18px;
+      background: rgba(22, 124, 120, 0.06);
+      border: 1px solid rgba(22, 124, 120, 0.08);
+      font-size: 0.93rem;
+    }
+
+    .section {
+      padding: 14px 0 18px;
+    }
+
+    .section-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: end;
+      gap: 18px;
+      margin-bottom: 18px;
+    }
+
+    .section-kicker {
+      color: var(--accent-dark);
+      font-size: 0.83rem;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 18px;
+    }
+
+    .info-card {
+      padding: 24px;
+    }
+
+    .footer {
+      padding: 36px 0 56px;
+      color: var(--muted);
+      font-size: 0.94rem;
+    }
+
+    @media (max-width: 980px) {
+      .hero-layout,
+      .info-grid,
+      .metrics {
+        grid-template-columns: 1fr;
+      }
+
+      .nav {
+        flex-direction: column;
+        align-items: start;
+      }
+
+      .hero-card,
+      .upload-card,
+      .info-card {
+        padding: 24px;
+      }
     }
   </style>
-
-  <title>Skin Cancer Detection using Convolutional Neural Network</title>
 </head>
-
 <body>
-  <center>
-    <h1>Skin Cancer Detection</h1>
-    <h1>using Convolutional Neural Network</h1>
-  </center>
+  <header class="site-header">
+    <nav class="nav">
+      <a class="brand" href="/">
+        <strong>MelanoDetect: Skin Cancer Detection Using CNN</strong>
+        <span>AI-assisted lesion screening experience</span>
+      </a>
+      <div class="nav-links">
+        <a href="/platform">Platform</a>
+        <a href="/workflow">Workflow</a>
+        <a href="/faq">FAQ</a>
+      </div>
+      <a class="nav-cta" href="#analysis">Start Screening</a>
+    </nav>
+  </header>
 
-  <!-- The primary goal of this work is to build up a Model of Skin Cancer Detection System utilizing Machine Learning Algorithms. After experimenting with many different architectures for the CNN model It is found that adding the BatchNormalization layer after each Dense, and MaxPooling2D layer can help increase the validation accuracy. In future, a mobile application can be made. -->
-  <br>
-  <br>
-  <center>
-    <h3>Select Skin image here</h3>
-  </center>
-  <br>
+  <main class="page">
+    <section class="hero">
+      <article class="hero-card">
+        <div class="hero-layout">
+          <div>
+          <span class="eyebrow">MelanoDetect</span>
+          <h1>Fast, focused skin lesion screening for clearer review.</h1>
+          <p class="lead">
+            Upload a lesion image to generate a clean screening report with the
+            predicted class, confidence score, and ranked model probabilities.
+          </p>
 
-  <center>
-    <form method="POST" enctype=multipart/form-data action="/showresult">
-      <div class="form-inline col-sm-4">
-        <input class="form-control" onchange="readURL(this);" type="file" name="pic" class="custom-file-input">
-        <br>
-        <input class="btn btn-light" type="submit" style="background-color:green; color:white;">
-  </center>
-  <br><br>
-  <!-- <img id="im" src="#" style="display:none;"/><br><br> -->
-  </div>
-  </form>
+            <div class="hero-actions">
+              <a class="button primary" href="#analysis">Start Analysis</a>
+              <a class="button secondary" href="/workflow">View Workflow</a>
+            </div>
 
-  <center> => <a
-      href="https://charanhu.medium.com/skin-cancer-detection-using-convolution-neural-network-cnn-b9c1fb5bb492"
-      style="text-decoration: none">Click here to Read the complete blog this Project</a></center>
-  <br>
-  <center> => <a href="https://github.com/charanhu/Skin-Cancer-Detection-MNIST" style="text-decoration: none">Click here
-      to check out Code of My Project</a></center>
+            <div class="metrics">
+              <div class="metric">
+                <strong>7 outputs</strong>
+                Supported lesion classes from the deployed model.
+              </div>
+              <div class="metric">
+                <strong>Fast review</strong>
+                Upload, screen, and interpret within one flow.
+              </div>
+              <div class="metric">
+                <strong>Clean report</strong>
+                Confidence-led presentation built for demos and review.
+              </div>
+            </div>
+          </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
-    integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf" crossorigin="anonymous">
-    </script>
+          <aside class="upload-card" id="analysis">
+            <div>
+              <div class="section-kicker">Live Analysis</div>
+              <h2>Upload And Review</h2>
+              <p>Select a JPG or PNG image to generate a lesion classification report.</p>
+            </div>
+
+            {% if error %}
+            <div class="error">{{ error }}</div>
+            {% endif %}
+
+            <form method="POST" enctype="multipart/form-data" action="/showresult">
+              <div class="upload-box">
+                <input id="fileInput" type="file" name="pic" accept=".jpg,.jpeg,.png,image/jpeg,image/png" required>
+              </div>
+              <div style="height: 14px;"></div>
+              <img id="previewImage" class="preview" alt="Selected preview">
+              <div style="height: 18px;"></div>
+              <button type="submit">Generate Screening Report</button>
+            </form>
+
+            <div class="panel-note">
+              Use a clear, well-lit lesion image for the best screening output.
+            </div>
+          </aside>
+        </div>
+      </article>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <div>
+          <div class="section-kicker">Overview</div>
+          <h2>Built to feel product-ready</h2>
+        </div>
+        <p>A more balanced layout with better spacing, scale, and hierarchy.</p>
+      </div>
+
+      <div class="info-grid">
+        <article class="info-card">
+          <h3>Focused interface</h3>
+          <p>The design centers attention on the upload workflow and the screening outcome instead of overloading the page.</p>
+        </article>
+        <article class="info-card">
+          <h3>Better proportions</h3>
+          <p>The hero, metrics, and upload card are balanced to feel intentional on wide screens and stable on smaller ones.</p>
+        </article>
+        <article class="info-card">
+          <h3>Cleaner presentation</h3>
+          <p>The visual system is kept minimal while still giving the app a polished, modern product look.</p>
+        </article>
+      </div>
+    </section>
+
+    <footer class="footer">
+      MelanoDetect: Skin Cancer Detection Using CNN
+    </footer>
+  </main>
+
+  <script>
+    const fileInput = document.getElementById("fileInput");
+    const previewImage = document.getElementById("previewImage");
+
+    fileInput.addEventListener("change", function (event) {
+      const [file] = event.target.files;
+      if (!file) {
+        previewImage.style.display = "none";
+        previewImage.removeAttribute("src");
+        return;
+      }
+
+      previewImage.src = URL.createObjectURL(file);
+      previewImage.style.display = "block";
+    });
+  </script>
 </body>
-
 </html>

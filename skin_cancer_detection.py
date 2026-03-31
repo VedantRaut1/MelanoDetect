@@ -1,61 +1,55 @@
-# The primary goal of this work is to build up a Model of Skin Cancer Detection System utilizing Machine Learning Algorithms. After experimenting with many different architectures for the CNN model It is found that adding the BatchNormalization layer after each Dense, and MaxPooling2D layer can help increase the validation accuracy. In future, a mobile application can be made.
+import json
+from pathlib import Path
 
-# reference: https://www.kaggle.com/kmader/skin-cancer-mnist-ham10000/discussion/183083
-# Data: https://www.kaggle.com/kmader/skin-cancer-mnist-ham10000
-# https://keras.io/api/models/sequential/
-# https://keras.io/api/layers/core_layers/dense/
-# https://keras.io/api/layers/merging_layers/add/
-# https://keras.io/api/layers/convolution_layers/convolution2d
-# https://keras.io/api/layers/convolution_layers/convolution2d
-# https://www.tensorflow.org/api_docs/python/tf/keras/layers/BatchNormalization
+import numpy as np
+import torch
+import torch.nn.functional as F
+from PIL import Image
+from torchvision import models, transforms
 
 
+BASE_DIR = Path(__file__).resolve().parent
+MODEL_PATH = BASE_DIR / "best_model.pth"
+CLASS_NAMES_PATH = BASE_DIR / "class_names.json"
 
-import tensorflow as tf
-from tensorflow.keras.layers import Conv2D, Flatten, Dense, MaxPool2D
-from tensorflow.keras.models import Sequential
-
-classes = {
-    0: ("actinic keratoses and intraepithelial carcinomae(Cancer)"),
-    1: ("basal cell carcinoma(Cancer)"),
-    2: ("benign keratosis-like lesions(Non-Cancerous)"),
-    3: ("dermatofibroma(Non-Cancerous)"),
-    4: ("melanocytic nevi(Non-Cancerous)"),
-    5: ("pyogenic granulomas and hemorrhage(Can lead to cancer)"),
-    6: ("melanoma(Cancer)"),
-}
+NORM_MEAN = [0.7630392, 0.5456477, 0.57004845]
+NORM_STD = [0.1409286, 0.15261266, 0.16997074]
+IMAGE_SIZE = 224
 
 
-model = Sequential()
-model.add(
-    Conv2D(
-        16,
-        kernel_size=(3, 3),
-        input_shape=(28, 28, 3),
-        activation="relu",
-        padding="same",
-    )
+with CLASS_NAMES_PATH.open("r", encoding="utf-8") as handle:
+    CLASS_NAMES = json.load(handle)
+
+
+def build_model():
+    model = models.mobilenet_v2(weights=None)
+    in_features = model.classifier[1].in_features
+    model.classifier[1] = torch.nn.Linear(in_features, len(CLASS_NAMES))
+    state_dict = torch.load(MODEL_PATH, map_location="cpu")
+    model.load_state_dict(state_dict)
+    model.eval()
+    return model
+
+
+MODEL = build_model()
+
+PREPROCESS = transforms.Compose(
+    [
+        transforms.Resize((IMAGE_SIZE, IMAGE_SIZE)),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=NORM_MEAN, std=NORM_STD),
+    ]
 )
-model.add(MaxPool2D(pool_size=(2, 2)))
-model.add(tf.keras.layers.BatchNormalization())
-model.add(Conv2D(32, kernel_size=(3, 3), activation="relu"))
-model.add(Conv2D(64, kernel_size=(3, 3), activation="relu"))
-model.add(MaxPool2D(pool_size=(2, 2)))
-model.add(tf.keras.layers.BatchNormalization())
-model.add(Conv2D(128, kernel_size=(3, 3), activation="relu"))
-model.add(Conv2D(256, kernel_size=(3, 3), activation="relu"))
-model.add(Flatten())
-model.add(tf.keras.layers.Dropout(0.2))
-model.add(Dense(256, activation="relu"))
-model.add(tf.keras.layers.BatchNormalization())
-model.add(tf.keras.layers.Dropout(0.2))
-model.add(Dense(128, activation="relu"))
-model.add(tf.keras.layers.BatchNormalization())
-model.add(Dense(64, activation="relu"))
-model.add(tf.keras.layers.BatchNormalization())
-model.add(tf.keras.layers.Dropout(0.2))
-model.add(Dense(32, activation="relu"))
-model.add(tf.keras.layers.BatchNormalization())
-model.add(Dense(7, activation="softmax"))
-model.summary()
-model.load_weights("best_model.h5")
+
+
+def prepare_image(image: Image.Image) -> torch.Tensor:
+    tensor = PREPROCESS(image.convert("RGB"))
+    return tensor.unsqueeze(0)
+
+
+def predict(image: Image.Image) -> np.ndarray:
+    tensor = prepare_image(image)
+    with torch.no_grad():
+        logits = MODEL(tensor)
+        probabilities = F.softmax(logits, dim=1)
+    return probabilities.squeeze(0).cpu().numpy()

@@ -1,9 +1,6 @@
-numpy
-keras
-tensorflow-cpu==2.5.0
-pandas
-matplotlib
-pillow
 flask
-seaborn
+numpy
+pillow
+torch
+torchvision
 gunicorn
