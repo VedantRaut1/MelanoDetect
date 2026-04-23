@@ -1,98 +1,76 @@
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>MelanoDetect: Workflow</title>
-  <style>
-    :root {
-      --bg: #eef5f2;
-      --panel: rgba(255, 255, 255, 0.9);
-      --text: #122126;
-      --muted: #61737b;
-      --accent: #0f766e;
-      --line: rgba(18, 33, 38, 0.08);
-      --shadow: 0 24px 70px rgba(20, 43, 48, 0.12);
-    }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-      color: var(--text);
-      background: linear-gradient(180deg, #f4faf7 0%, #edf4f1 100%);
-    }
-    a { color: inherit; text-decoration: none; }
-    .page { width: min(1120px, calc(100% - 40px)); margin: 0 auto; }
-    .header {
-      padding: 22px 0;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 16px;
-    }
-    .nav-links { display: flex; gap: 18px; color: var(--muted); font-weight: 600; }
-    .hero, .card {
-      background: var(--panel);
-      border: 1px solid var(--line);
-      border-radius: 28px;
-      box-shadow: var(--shadow);
-    }
-    .hero { padding: 38px; margin-bottom: 22px; }
-    .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; }
-    .card { padding: 22px; }
-    h1 { margin: 0 0 12px; font-size: clamp(2.2rem, 4vw, 4rem); letter-spacing: -0.04em; }
-    h2 { margin: 0 0 8px; font-size: 1.1rem; }
-    p { margin: 0; color: var(--muted); line-height: 1.72; }
-    .button {
-      display: inline-flex;
-      padding: 12px 16px;
-      border-radius: 16px;
-      background: linear-gradient(135deg, var(--accent) 0%, #14998f 100%);
-      color: white;
-      font-weight: 700;
-      margin-top: 18px;
-    }
-    @media (max-width: 950px) {
-      .grid { grid-template-columns: 1fr; }
-      .header { flex-direction: column; align-items: start; }
-    }
-  </style>
-</head>
-<body>
-  <main class="page">
-    <header class="header">
-      <a href="/"><strong>MelanoDetect: Skin Cancer Detection Using CNN</strong></a>
-      <nav class="nav-links">
-        <a href="/platform">Platform</a>
-        <a href="/workflow">Workflow</a>
-        <a href="/faq">FAQ</a>
-      </nav>
-    </header>
+{% extends "base.html" %}
 
-    <section class="hero">
-      <h1>Workflow</h1>
-      <p>The screening flow is built to stay simple: upload the lesion image, process it through the CNN pipeline, and review the resulting report with confidence-based ranking.</p>
-      <a class="button" href="/">Start Analysis</a>
-    </section>
+{% block title %}MelanoDetect: Workflow{% endblock %}
 
-    <section class="grid">
-      <article class="card">
-        <h2>1. Upload</h2>
-        <p>Select a clear lesion image in JPG or PNG format.</p>
-      </article>
-      <article class="card">
-        <h2>2. Preprocess</h2>
-        <p>The image is normalized and resized for the deployed model.</p>
-      </article>
-      <article class="card">
-        <h2>3. Predict</h2>
-        <p>The CNN returns ranked class probabilities across supported outputs.</p>
-      </article>
-      <article class="card">
-        <h2>4. Review</h2>
-        <p>The app displays the result, confidence, and alternative probabilities.</p>
-      </article>
-    </section>
-  </main>
-</body>
-</html>
+{% block head %}
+<style>
+  .workflow-hero {
+    padding: 60px 0;
+  }
+  
+  .workflow-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 30px;
+  }
+  
+  .step-number {
+    display: inline-flex;
+    width: 40px;
+    height: 40px;
+    background: var(--accent);
+    color: white;
+    border-radius: 50%;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    margin-bottom: 16px;
+  }
+  
+  @media (max-width: 768px) {
+    .workflow-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="workflow-hero">
+  <div class="card" style="margin-bottom: 40px; text-align: center; padding: 60px 40px;">
+    <span class="eyebrow">How it works</span>
+    <h1 style="margin-bottom: 20px;">Screening Workflow</h1>
+    <p style="font-size: 1.1rem; max-width: 60ch; margin: 0 auto 30px;">
+      Our screening flow is built for simplicity: upload, process, and review.
+      The entire pipeline happens locally on your machine for privacy and speed.
+    </p>
+    <a href="/" class="button button-primary">Start Analysis</a>
+  </div>
+
+  <div class="workflow-grid">
+    <div class="card">
+      <div class="step-number">1</div>
+      <h3>Upload Image</h3>
+      <p>Select a clear lesion image in JPG or PNG format. Ensure the lesion is centered and well-lit for the best screening results.</p>
+    </div>
+    
+    <div class="card">
+      <div class="step-number">2</div>
+      <h3>AI Preprocessing</h3>
+      <p>The image is automatically normalized and resized. Our CNN pipeline prepares the data to ensure clinical compatibility with our model layers.</p>
+    </div>
+    
+    <div class="card">
+      <div class="step-number">3</div>
+      <h3>Model Prediction</h3>
+      <p>The trained CNN analyzes the features and returns ranked probabilities across 7 distinct lesion classes, determining the most likely classification.</p>
+    </div>
+    
+    <div class="card">
+      <div class="step-number">4</div>
+      <h3>Review Report</h3>
+      <p>A detailed report is generated instantly, showing the prediction, confidence level, and an AI attention map for visual confirmation.</p>
+    </div>
+  </div>
+</section>
+{% endblock %}

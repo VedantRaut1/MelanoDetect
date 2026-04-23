@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}MelanoDetect{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/theme.css') }}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  {% block head %}{% endblock %}
+</head>
+<body>
+  <header class="site-header">
+    <nav class="nav">
+      <a class="brand" href="/">
+        <strong>MelanoDetect</strong>
+        <span>AI-assisted lesion screening</span>
+      </a>
+      <div class="nav-links">
+        <a href="/platform" class="{% if request.path == '/platform' %}active{% endif %}">Platform</a>
+        <a href="/workflow" class="{% if request.path == '/workflow' %}active{% endif %}">Workflow</a>
+        <a href="/faq" class="{% if request.path == '/faq' %}active{% endif %}">FAQ</a>
+      </div>
+      <a class="nav-cta" href="/#analysis">Start Screening</a>
+    </nav>
+  </header>
+
+  <main class="page">
+    {% block content %}{% endblock %}
+    
+    <footer class="footer">
+      <div class="footer-content">
+        <div class="footer-brand">
+          <strong>MelanoDetect</strong>
+          <p>Local screening interface for skin lesion classification.</p>
+        </div>
+        <div class="footer-links">
+          <a href="/platform">Platform</a>
+          <a href="/workflow">Workflow</a>
+          <a href="/faq">FAQ</a>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        &copy; {{ now.year if now else '2026' }} MelanoDetect Project. Medical Screening Disclaimer: Automated screening output only.
+      </div>
+    </footer>
+  </main>
+
+  {% block scripts %}{% endblock %}
+</body>
+</html>
