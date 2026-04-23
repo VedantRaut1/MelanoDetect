@@ -1,347 +1,343 @@
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>MelanoDetect: Screening Result</title>
-  <style>
-    :root {
-      --bg: #eef5f2;
-      --panel: rgba(255, 255, 255, 0.9);
-      --text: #132126;
-      --muted: #617178;
-      --accent: #0f766e;
-      --accent-strong: #0b5d57;
-      --accent-soft: rgba(15, 118, 110, 0.12);
-      --line: rgba(19, 33, 38, 0.08);
-      --shadow: 0 24px 70px rgba(17, 42, 46, 0.12);
+{% extends "base.html" %}
+
+{% block title %}MelanoDetect: Screening Result{% endblock %}
+
+{% block head %}
+<style>
+  .results-page {
+    padding: 60px 0;
+  }
+
+  .results-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+  }
+
+  /* XAI Viewer */
+  .xai-card {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .xai-viewer {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    background: #000;
+    border: 1px solid var(--line);
+  }
+
+  .xai-viewer img {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .heatmap-layer {
+    mix-blend-mode: screen;
+    opacity: 0.6;
+  }
+
+  .controls {
+    display: grid;
+    gap: 12px;
+  }
+
+  input[type=range] {
+    width: 100%;
+    accent-color: var(--accent);
+    cursor: pointer;
+  }
+
+  /* Right Panel: Prediction & Risk */
+  .diagnosis-card {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  .gauge-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+    background: var(--accent-soft);
+    border-radius: var(--radius-md);
+    position: relative;
+  }
+
+  .gauge {
+    position: relative;
+    width: 200px;
+    height: 100px;
+    overflow: hidden;
+  }
+
+  .gauge-bg {
+    position: absolute;
+    width: 200px;
+    height: 200px;
+    border: 20px solid rgba(0,0,0,0.05);
+    border-radius: 50%;
+  }
+
+  .gauge-fill {
+    position: absolute;
+    width: 200px;
+    height: 200px;
+    border: 20px solid transparent;
+    border-radius: 50%;
+    transform: rotate(45deg);
+    transition: transform 1s ease-out;
+  }
+
+  /* Dynamic Risk Colors */
+  .risk-low .gauge-fill { border-top-color: var(--success); border-right-color: var(--success); }
+  .risk-medium .gauge-fill { border-top-color: var(--warning); border-right-color: var(--warning); }
+  .risk-high .gauge-fill { border-top-color: var(--danger); border-right-color: var(--danger); }
+
+  .gauge-needle {
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    width: 4px;
+    height: 80px;
+    background: var(--text);
+    transform-origin: bottom center;
+    border-radius: 4px;
+    transition: transform 1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    z-index: 2;
+  }
+
+  .confidence-val {
+    font-size: 2.5rem;
+    font-weight: 800;
+    margin-top: 10px;
+    color: var(--text);
+  }
+
+  .risk-label {
+    padding: 6px 16px;
+    border-radius: 999px;
+    font-weight: 800;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
+    margin-top: 8px;
+  }
+
+  .risk-low .risk-label { background: rgba(16, 185, 129, 0.15); color: #065f46; }
+  .risk-medium .risk-label { background: rgba(245, 158, 11, 0.15); color: #92400e; }
+  .risk-high .risk-label { background: rgba(239, 68, 68, 0.15); color: #991b1b; }
+
+  .diagnosis-info h1 {
+    font-size: 2.2rem;
+    margin-bottom: 12px;
+  }
+
+  .meta-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  .meta-item {
+    background: white;
+    padding: 16px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--line);
+  }
+
+  .meta-item label {
+    display: block;
+    font-size: 0.7rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    margin-bottom: 4px;
+  }
+
+  .meta-item span {
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .disclaimer {
+    padding: 20px;
+    background: rgba(239, 68, 68, 0.05);
+    border: 1px solid rgba(239, 68, 68, 0.1);
+    border-radius: var(--radius-md);
+    font-size: 0.9rem;
+    color: #991b1b;
+  }
+
+  /* Ranked Predictions */
+  .ranked-list {
+    margin-top: 30px;
+  }
+  
+  .ranked-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--line);
+  }
+  
+  .ranked-item:last-child {
+    border-bottom: none;
+  }
+  
+  .prob-bar-container {
+    flex: 1;
+    margin: 0 20px;
+    height: 6px;
+    background: rgba(0,0,0,0.05);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  
+  .prob-bar {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 3px;
+  }
+
+  @media (max-width: 992px) {
+    .results-layout {
+      grid-template-columns: 1fr;
     }
+  }
+</style>
+{% endblock %}
 
-    * {
-      box-sizing: border-box;
-    }
-
-    body {
-      margin: 0;
-      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-      color: var(--text);
-      background:
-        radial-gradient(circle at top left, rgba(15, 118, 110, 0.17), transparent 24%),
-        linear-gradient(180deg, #f5faf8 0%, #edf4f1 45%, #fafcfb 100%);
-      min-height: 100vh;
-    }
-
-    .page {
-      width: min(1180px, calc(100% - 40px));
-      margin: 0 auto;
-    }
-
-    .site-header {
-      position: sticky;
-      top: 0;
-      z-index: 10;
-      backdrop-filter: blur(14px);
-      background: rgba(245, 250, 248, 0.76);
-      border-bottom: 1px solid rgba(19, 33, 38, 0.05);
-    }
-
-    .nav {
-      width: min(1180px, calc(100% - 40px));
-      margin: 0 auto;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 20px;
-      padding: 18px 0;
-    }
-
-    .brand {
-      display: grid;
-      gap: 4px;
-    }
-
-    .brand strong {
-      font-size: 1.05rem;
-      letter-spacing: -0.02em;
-    }
-
-    .brand span {
-      font-size: 0.84rem;
-      color: var(--muted);
-    }
-
-    .nav-actions {
-      display: flex;
-      gap: 12px;
-      flex-wrap: wrap;
-    }
-
-    .button {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      text-decoration: none;
-      padding: 13px 18px;
-      border-radius: 18px;
-      font-weight: 700;
-    }
-
-    .button.primary {
-      background: linear-gradient(135deg, #0f766e 0%, #14998f 100%);
-      color: white;
-      box-shadow: 0 14px 28px rgba(15, 118, 110, 0.2);
-    }
-
-    .button.secondary {
-      background: rgba(255, 255, 255, 0.8);
-      color: var(--text);
-      border: 1px solid var(--line);
-    }
-
-    .layout {
-      padding: 34px 0 54px;
-      display: grid;
-      grid-template-columns: 0.92fr 1.08fr;
-      gap: 24px;
-    }
-
-    .panel {
-      background: var(--panel);
-      border: 1px solid var(--line);
-      border-radius: 30px;
-      box-shadow: var(--shadow);
-      padding: 28px;
-      backdrop-filter: blur(12px);
-    }
-
-    .tag {
-      display: inline-flex;
-      align-items: center;
-      padding: 8px 12px;
-      border-radius: 999px;
-      background: var(--accent-soft);
-      color: var(--accent-strong);
-      font-size: 0.88rem;
-      font-weight: 700;
-      margin-bottom: 14px;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-    }
-
-    .image-card img {
-      width: 100%;
-      border-radius: 24px;
-      aspect-ratio: 1 / 1;
-      object-fit: cover;
-      border: 1px solid var(--line);
-      background: white;
-    }
-
-    .file-box {
-      margin-top: 16px;
-      padding: 16px;
-      border-radius: 18px;
-      background: rgba(15, 118, 110, 0.05);
-      border: 1px solid rgba(15, 118, 110, 0.08);
-    }
-
-    h1 {
-      margin: 0 0 8px;
-      font-size: clamp(2.1rem, 4vw, 3.8rem);
-      line-height: 0.96;
-      letter-spacing: -0.03em;
-    }
-
-    h2 {
-      margin: 0;
-      font-size: 1.1rem;
-      letter-spacing: -0.01em;
-    }
-
-    p {
-      color: var(--muted);
-      line-height: 1.74;
-      margin: 0;
-    }
-
-    .summary {
-      display: grid;
-      gap: 18px;
-    }
-
-    .headline {
-      display: grid;
-      gap: 10px;
-    }
-
-    .confidence {
-      padding: 20px;
-      border-radius: 24px;
-      background: linear-gradient(135deg, rgba(15, 118, 110, 0.1), rgba(255, 255, 255, 0.86));
-      border: 1px solid rgba(15, 118, 110, 0.14);
-    }
-
-    .confidence strong {
-      display: block;
-      font-size: 2.2rem;
-      margin-top: 4px;
-      color: var(--text);
-    }
-
-    .meta {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 14px;
-    }
-
-    .meta-card {
-      padding: 18px;
-      border-radius: 20px;
-      border: 1px solid var(--line);
-      background: rgba(255, 255, 255, 0.75);
-      display: grid;
-      gap: 8px;
-    }
-
-    .ranking {
-      display: grid;
-      gap: 12px;
-      margin-top: 4px;
-    }
-
-    .rank-row {
-      display: grid;
-      gap: 8px;
-    }
-
-    .rank-head {
-      display: flex;
-      justify-content: space-between;
-      gap: 16px;
-      font-size: 0.96rem;
-      color: var(--text);
-    }
-
-    .bar {
-      height: 12px;
-      border-radius: 999px;
-      background: rgba(19, 33, 38, 0.08);
-      overflow: hidden;
-    }
-
-    .bar > span {
-      display: block;
-      height: 100%;
-      border-radius: inherit;
-      background: linear-gradient(90deg, #18a79b, #0f766e);
-    }
-
-    .insight-card {
-      padding: 18px;
-      border-radius: 20px;
-      border: 1px solid rgba(15, 118, 110, 0.08);
-      background: rgba(15, 118, 110, 0.05);
-    }
-
-    .footer-note {
-      padding: 0 0 42px;
-      color: var(--muted);
-      font-size: 0.94rem;
-    }
-
-    @media (max-width: 920px) {
-      .layout,
-      .meta {
-        grid-template-columns: 1fr;
-      }
-
-      .panel {
-        padding: 24px;
-      }
-
-      .nav {
-        align-items: start;
-        flex-direction: column;
-      }
-    }
-  </style>
-</head>
-<body>
-  <header class="site-header">
-    <nav class="nav">
-      <a class="brand" href="/">
-        <strong>MelanoDetect: Skin Cancer Detection Using CNN</strong>
-        <span>AI-assisted lesion screening report</span>
-      </a>
-      <div class="nav-actions">
-        <a class="button secondary" href="/">Dashboard</a>
-        <a class="button primary" href="/">Analyze Another Image</a>
+{% block content %}
+<div class="results-page risk-{{ metadata.risk_level }}">
+  <div class="results-layout">
+    <!-- Left: XAI Heatmap -->
+    <section class="card xai-card">
+      <div style="margin-bottom: 10px;">
+        <span class="eyebrow">Explainable AI</span>
+        <h2 style="margin-top: 8px;">Attention Map</h2>
+        <p>Spatial regions that drove this prediction using Grad-CAM.</p>
       </div>
-    </nav>
-  </header>
+      
+      <div class="xai-viewer">
+        <img src="{{ image_data }}" alt="Original Image" id="originalImg">
+        <img src="{{ heatmap_data }}" alt="Heatmap Overlay" class="heatmap-layer" id="heatmapImg">
+      </div>
 
-  <main class="page">
-    <section class="layout">
-      <article class="panel image-card">
-        <span class="tag">Submitted Case</span>
-        <img src="{{ image_data }}" alt="Uploaded skin lesion image">
-        <div class="file-box">
-          <h2>Uploaded file</h2>
-          <p>{{ filename }}</p>
+      <div class="controls">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <label for="opacityRange" style="font-weight: 700; font-size: 0.9rem;">Overlay Intensity</label>
+          <span id="opacityVal" style="font-weight: 800; color: var(--accent);">60%</span>
         </div>
-      </article>
+        <input type="range" id="opacityRange" min="0" max="100" value="60">
+        <p style="font-size: 0.8rem; margin: 0;">Slide to adjust heatmap transparency. Red regions indicate areas of high interest to the model.</p>
+      </div>
 
-      <section class="panel summary">
-        <div class="headline">
-          <span class="tag">Screening Report</span>
-          <h1>{{ diagnosis.name }}</h1>
-          <p>{{ diagnosis.description }}</p>
-        </div>
-
-        <div class="confidence">
-          <h2>Model Confidence</h2>
-          <strong>{{ confidence }}%</strong>
-          <p>Highest predicted class probability returned by the deployed CNN pipeline.</p>
-        </div>
-
-        <div class="meta">
-          <div class="meta-card">
-            <h2>Risk Category</h2>
-            <p>{{ diagnosis.risk }}</p>
+      <div class="ranked-list">
+        <h3 style="margin-bottom: 16px; font-size: 1.1rem;">Ranked Probabilities</h3>
+        {% for pred in ranked_predictions %}
+        <div class="ranked-item">
+          <span style="font-weight: 600; width: 140px; font-size: 0.9rem;">{{ pred.name }}</span>
+          <div class="prob-bar-container">
+            <div class="prob-bar" data-width="{{ pred.probability }}%"></div>
           </div>
-          <div class="meta-card">
-            <h2>Interpretation Note</h2>
-            <p>This result should support review and triage, not replace specialist evaluation.</p>
-          </div>
+          <span style="font-weight: 800; width: 50px; text-align: right; font-size: 0.9rem;">{{ pred.probability|round|int }}%</span>
         </div>
-
-        <div class="insight-card">
-          <h2>Clinical Guidance</h2>
-          <p>Any rapidly changing, bleeding, painful, or suspicious lesion should be reviewed promptly by a dermatologist, regardless of the predicted class.</p>
-        </div>
-
-        <div>
-          <h2>Probability Ranking</h2>
-          <div class="ranking">
-            {% for item in ranked_predictions %}
-            <div class="rank-row">
-              <div class="rank-head">
-                <span>{{ item.name }} <small>({{ item.risk }})</small></span>
-                <strong>{{ item.probability }}%</strong>
-              </div>
-              <div class="bar">
-                <span style="width: {{ item.probability }}%;"></span>
-              </div>
-            </div>
-            {% endfor %}
-          </div>
-        </div>
-      </section>
+        {% endfor %}
+      </div>
     </section>
 
-    <div class="footer-note">
-      MelanoDetect presents ranked CNN-based screening outputs for demonstration and clinical-support workflows.
-    </div>
-  </main>
-</body>
-</html>
+    <!-- Right: Confidence & Diagnosis -->
+    <section class="card diagnosis-card">
+      <div class="gauge-container">
+        <div class="gauge">
+          <div class="gauge-bg"></div>
+          <div class="gauge-fill" id="gaugeFill"></div>
+          <div class="gauge-needle" id="gaugeNeedle" data-confidence="{{ metadata.confidence }}"></div>
+        </div>
+        <div class="confidence-val">{{ metadata.confidence }}%</div>
+        <div class="risk-label">{{ metadata.risk_level }} risk</div>
+      </div>
+
+      <div class="diagnosis-info">
+        <span class="eyebrow" style="margin-bottom: 12px;">Primary Prediction</span>
+        <h1>{{ diagnosis.name }}</h1>
+        <p>{{ diagnosis.description }}</p>
+      </div>
+
+      <div class="meta-grid">
+        <div class="meta-item">
+          <label>Inference ID</label>
+          <span>#{{ metadata.timestamp[-6:] }}</span>
+        </div>
+        <div class="meta-item">
+          <label>Risk Level</label>
+          <span>{{ diagnosis.risk }}</span>
+        </div>
+        <div class="meta-item">
+          <label>Status</label>
+          <span style="color: var(--success);">Analysis Complete</span>
+        </div>
+        <div class="meta-item">
+          <label>Model Version</label>
+          <span>v1.2-pro</span>
+        </div>
+      </div>
+
+      <div class="disclaimer">
+        <strong>Medical Screening Disclaimer:</strong>
+        This result is generated by an automated screening algorithm. It is NOT a clinical diagnosis. 
+        Please consult a qualified dermatologist for professional evaluation.
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+        <a href="/" class="button button-secondary">Restart</a>
+        <a href="/" class="button button-primary" style="background: var(--text);">New Case</a>
+      </div>
+    </section>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Opacity Control
+  const opacityRange = document.getElementById('opacityRange');
+  const heatmapImg = document.getElementById('heatmapImg');
+  const opacityVal = document.getElementById('opacityVal');
+
+  opacityRange.addEventListener('input', (e) => {
+    const val = e.target.value;
+    heatmapImg.style.opacity = val / 100;
+    opacityVal.innerText = val + '%';
+  });
+
+  // Gauge Animation
+  window.addEventListener('DOMContentLoaded', () => {
+    // Prob bars
+    document.querySelectorAll('.prob-bar').forEach(bar => {
+      bar.style.width = bar.dataset.width;
+    });
+
+    const needle = document.getElementById('gaugeNeedle');
+    const confScore = Number(needle.dataset.confidence);
+    
+    // Map 0-100 to -90 to 90 degrees
+    const angle = (confScore / 100) * 180 - 90;
+    setTimeout(() => {
+      needle.style.transform = `rotate(${angle}deg)`;
+    }, 300);
+  });
+</script>
+{% endblock %}
